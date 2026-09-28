@@ -1,0 +1,64 @@
+name: Morning briefing
+
+on:
+  schedule:
+    # Heure en UTC ! 03:40 UTC = 05:40 en été / 04:40 en hiver (heure française).
+    # Minute "bizarre" exprès : les crons pile à :00 sont souvent retardés.
+    - cron: "40 3 * * *"
+  workflow_dispatch: {}   # bouton "Run workflow" pour tester à la main
+
+permissions:
+  contents: write   # pour enregistrer l'historique des textes
+  pages: write      # pour publier le mp3
+  id-token: write
+
+concurrency:
+  group: briefing
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Installer les dépendances
+        run: pip install -r requirements.txt
+
+      - name: Générer le briefing
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          TTS_VOICE: ash
+          BRIEFING_LANGUAGE: English
+        run: python briefing.py
+
+      # Garde une trace du texte ET maintient le dépôt "actif"
+      # (GitHub désactive les crons après 60 jours sans activité).
+      - name: Archiver le texte du jour
+        run: |
+          mkdir -p history
+          cp public/briefing.txt "history/$(date -u +%F).txt"
+          git config user.name "briefing-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add history
+          git commit -m "Briefing $(date -u +%F)" || echo "Rien à committer"
+          git push
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+      - name: Publier sur GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
