@@ -37,7 +37,7 @@ jobs:
       - name: Générer le briefing
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          TTS_VOICE: ash
+          TTS_VOICE: nova
           BRIEFING_LANGUAGE: English
         run: python briefing.py
 
