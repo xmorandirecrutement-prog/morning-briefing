@@ -6,7 +6,7 @@ on:
   workflow_dispatch: {}
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
@@ -38,29 +38,6 @@ jobs:
           TTS_VOICE: nova
           BRIEFING_LANGUAGE: English
         run: python briefing.py
-
-      - name: Archiver le texte du jour
-        continue-on-error: true
-        run: |
-          set +e
-          git config user.name "briefing-bot"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          for i in 1 2 3 4 5; do
-            mkdir -p history
-            cp public/briefing.txt "history/$(date -u +%F).txt"
-            git fetch origin main
-            git reset --soft origin/main
-            git add history
-            if git diff --cached --quiet; then
-              echo "Rien à committer"
-              break
-            fi
-            git commit -m "Briefing $(date -u +%F)"
-            git push origin HEAD:main && break
-            echo "Push refusé, nouvelle tentative..."
-            sleep $((RANDOM % 5 + 2))
-          done
-          exit 0
 
       - uses: actions/configure-pages@v5
 
