@@ -2,14 +2,12 @@ name: Morning briefing
 
 on:
   schedule:
-    # Heure en UTC ! 03:40 UTC = 05:40 en été / 04:40 en hiver (heure française).
-    # Minute "bizarre" exprès : les crons pile à :00 sont souvent retardés.
     - cron: "40 3 * * *"
-  workflow_dispatch: {}   # bouton "Run workflow" pour tester à la main
+  workflow_dispatch: {}
 
 permissions:
-  contents: write   # pour enregistrer l'historique des textes
-  pages: write      # pour publier le mp3
+  contents: write
+  pages: write
   id-token: write
 
 concurrency:
@@ -41,11 +39,10 @@ jobs:
           BRIEFING_LANGUAGE: English
         run: python briefing.py
 
-      # Garde une trace du texte ET maintient le dépôt "actif"
-      # (GitHub désactive les crons après 60 jours sans activité).
-            - name: Archiver le texte du jour
+      - name: Archiver le texte du jour
         continue-on-error: true
         run: |
+          set +e
           git config user.name "briefing-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           for i in 1 2 3 4 5; do
@@ -59,14 +56,11 @@ jobs:
               break
             fi
             git commit -m "Briefing $(date -u +%F)"
-            if git push origin HEAD:main; then
-              echo "Push OK"
-              break
-            fi
+            git push origin HEAD:main && break
             echo "Push refusé, nouvelle tentative..."
             sleep $((RANDOM % 5 + 2))
           done
-
+          exit 0
 
       - uses: actions/configure-pages@v5
 
