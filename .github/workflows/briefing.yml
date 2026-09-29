@@ -43,15 +43,29 @@ jobs:
 
       # Garde une trace du texte ET maintient le dépôt "actif"
       # (GitHub désactive les crons après 60 jours sans activité).
-      - name: Archiver le texte du jour
+            - name: Archiver le texte du jour
+        continue-on-error: true
         run: |
-          mkdir -p history
-          cp public/briefing.txt "history/$(date -u +%F).txt"
           git config user.name "briefing-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add history
-          git pull --rebase --autostash || true
-          git push
+          for i in 1 2 3 4 5; do
+            mkdir -p history
+            cp public/briefing.txt "history/$(date -u +%F).txt"
+            git fetch origin main
+            git reset --soft origin/main
+            git add history
+            if git diff --cached --quiet; then
+              echo "Rien à committer"
+              break
+            fi
+            git commit -m "Briefing $(date -u +%F)"
+            if git push origin HEAD:main; then
+              echo "Push OK"
+              break
+            fi
+            echo "Push refusé, nouvelle tentative..."
+            sleep $((RANDOM % 5 + 2))
+          done
 
 
       - uses: actions/configure-pages@v5
